@@ -6,3 +6,39 @@ select name,(birth_year-2026)as age from actors where
 
 select*from (
 select name, (year(curdate())-birth_year)age from actors) as actors_age  where age>70 and age<85;
+
+select movie_id ,title,group_concat(name separator ' | ') as actors
+ from (
+	select m.movie_id,m.title,a.name from movies m
+	join movie_actor ma on ma.movie_id=m.movie_id
+	join actors a on a.actor_id=ma.actor_id )
+as act
+where  movie_id in (101,110,121) group by movie_id ;
+
+select*from movies where imdb_rating > some(
+select imdb_rating from movies 
+where studio='marvel studios');
+
+select*from movies where imdb_rating > all(
+select imdb_rating from movies 
+where studio='marvel studios');
+
+select  studio,avg(imdb_rating) from movies group by studio having avg(imdb_rating)> (select avg(imdb_rating) from movies where 
+ studio='marvel studios');
+ 
+select ma.actor_id,a.name,count(*)as movie_count from movie_actor ma
+join actors a on ma.actor_id=a.actor_id group by ma.actor_id order by movie_count desc;
+
+select actor_id,name,(select count(*)from movie_actor where actor_id=actors.actor_id)as movie_count
+from actors order by movie_count desc;
+
+select*from movies where release_year<some(select max(release_year) from movies);
+
+select*from movies where release_year>some(select min(release_year) from movies);
+
+select *from movies where imdb_rating>all(select avg(imdb_rating) from movies where studio='marvel studios');
+
+select * from movies 
+	where imdb_rating >  
+        (select avg(imdb_rating) from movies);
+select*from movies where studio='Marvel studios'

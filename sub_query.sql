@@ -4,8 +4,9 @@ from movies group by studio order by avg_rating desc;
 select name,(birth_year-2026)as age from actors where
 ((select name from actors where (birth_year-2026)>70),(select name from actors where (birth_year-2026)<85));
 
+
 select*from (
-select name, (year(curdate())-birth_year)age from actors) as actors_age  where age>70 and age<85;
+select name, (year(curdate())-birth_year)age from actors) as actors_age  where age>70 and age<85; -- calculating age of actors
 
 select movie_id ,title,group_concat(name separator ' | ') as actors
  from (
@@ -13,32 +14,27 @@ select movie_id ,title,group_concat(name separator ' | ') as actors
 	join movie_actor ma on ma.movie_id=m.movie_id
 	join actors a on a.actor_id=ma.actor_id )
 as act
-where  movie_id in (101,110,121) group by movie_id ;
+where  movie_id in (101,110,121) group by movie_id ; -- accessing movie actor acted in particular movie 
 
 select*from movies where imdb_rating > some(
 select imdb_rating from movies 
-where studio='marvel studios');
+where studio='marvel studios'); -- use case of some
 
 select*from movies where imdb_rating > all(
 select imdb_rating from movies 
-where studio='marvel studios');
+where studio='marvel studios'); -- use case of all
 
 select  studio,avg(imdb_rating) from movies group by studio having avg(imdb_rating)> (select avg(imdb_rating) from movies where 
- studio='marvel studios');
+ studio='marvel studios'); -- selecting studios which have imdb rating higher the marvel studios
  
 select ma.actor_id,a.name,count(*)as movie_count from movie_actor ma
-join actors a on ma.actor_id=a.actor_id group by ma.actor_id order by movie_count desc;
+join actors a on ma.actor_id=a.actor_id group by ma.actor_id order by movie_count desc; -- counting number of movies actors have acted
 
 select actor_id,name,(select count(*)from movie_actor where actor_id=actors.actor_id)as movie_count
-from actors order by movie_count desc;
+from actors order by movie_count desc;-- counting number of movies actors have acted with correlation subquery
 
 select*from movies where release_year<some(select max(release_year) from movies);
 
 select*from movies where release_year>some(select min(release_year) from movies);
 
 select *from movies where imdb_rating>all(select avg(imdb_rating) from movies where studio='marvel studios');
-
-select * from movies 
-	where imdb_rating >  
-        (select avg(imdb_rating) from movies);
-select*from movies where studio='Marvel studios'

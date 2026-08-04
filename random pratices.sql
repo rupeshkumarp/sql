@@ -1,3 +1,4 @@
+-- logical operators
 select *from movies where imdb_rating>8 and release_year>2015;
 select *from movies where imdb_rating>8 and release_year between  2015 and 2018;
 select*from actors where birth_year between 1970 and 1985;
@@ -5,6 +6,7 @@ select *from movies where studio in('Marvel Studios', 'Warner Bros. Pictures', '
 select *from financials where currency='inr' and unit='billions' and profit between 1 and 5;
 
 
+-- comparison operators
 select *from movies where industry='hollywood' order by imdb_rating desc;
 select *,case 
 when unit='thousands' then round(revenue/1000,2)
@@ -13,6 +15,7 @@ when unit='millions' then round(revenue,2)
 end as revenue_mle  from financials order by revenue_mle desc;
 
 
+-- aggregate functions
 select industry,count(industry)from movies group by industry;
 select round(avg(imdb_rating),2) as avg_r,language_id,group_concat(title separator' | ')
  from movies group by language_id having avg_r>8 order by avg_r;
@@ -27,7 +30,7 @@ select m.industry, avg(f.budget) as avg_b from movies m
 join financials f on m.movie_id=f.movie_id
 where currency='USD' group by industry having avg_b>100;
 
-
+-- case statements
 select *, case
   when imdb_rating >= 8 then 'Blockbuster'
   when imdb_rating between 6 and 8 then 'Average'
@@ -41,6 +44,7 @@ when birth_year>1985 then 'young'
 end as actor_cetogary from actors;
 select *,if(budget>200,'high budget','low budget') as budget_category from financials;
 
+-- joins
 select count(*) as counts,group_concat(m.title separator ' | ') as titles,l.name from movies m
 join languages l on m.language_id=l.language_id group by l.name;
 select f.revenue,f.budget,f.currency,f.unit,m.title,(revenue-budget)as profit from movies m
@@ -56,6 +60,7 @@ LEFT JOIN movie_actor ma
     ON a.actor_id = ma.actor_id
 WHERE ma.movie_id IS NULL;
 
+-- subqueries
 select*from movies where imdb_rating> (select avg(imdb_rating)from movies);
 select*from actors where birth_year=(select min(birth_year) from actors);
 select*from financials f where f.movie_id not in(select m.movie_id from movies m where m.movie_id=f.movie_id);
@@ -92,6 +97,7 @@ AND imdb_rating >(
     FROM movies);
 
 
+-- correlated subqueries
 SELECT
     m1.title,
     m1.industry,

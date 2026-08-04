@@ -30,6 +30,7 @@ select m.industry, avg(f.budget) as avg_b from movies m
 join financials f on m.movie_id=f.movie_id
 where currency='USD' group by industry having avg_b>100;
 
+
 -- case statements
 select *, case
   when imdb_rating >= 8 then 'Blockbuster'
@@ -43,6 +44,7 @@ when birth_year between 1950 and 1985 then 'mid'
 when birth_year>1985 then 'young'
 end as actor_cetogary from actors;
 select *,if(budget>200,'high budget','low budget') as budget_category from financials;
+
 
 -- joins
 select count(*) as counts,group_concat(m.title separator ' | ') as titles,l.name from movies m
@@ -59,6 +61,7 @@ FROM actors a
 LEFT JOIN movie_actor ma
     ON a.actor_id = ma.actor_id
 WHERE ma.movie_id IS NULL;
+
 
 -- subqueries
 select*from movies where imdb_rating> (select avg(imdb_rating)from movies);
@@ -95,6 +98,7 @@ WHERE industry = 'bollywood'
 AND imdb_rating >(
     SELECT max(imdb_rating)
     FROM movies);
+
 
 
 -- correlated subqueries

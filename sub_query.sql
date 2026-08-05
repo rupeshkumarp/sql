@@ -38,3 +38,14 @@ select*from movies where release_year<some(select max(release_year) from movies)
 select*from movies where release_year>some(select min(release_year) from movies);
 
 select *from movies where imdb_rating>all(select avg(imdb_rating) from movies where studio='marvel studios');
+
+-- common table expression CTE
+with actor_age (actor_name,age)as (select name , year(curdate())-birth_year from actors)
+select actor_name,age from actor_age where age>70 and age<85;
+
+#movies that produced 500% profit and their rating was less then avg rating from all movies
+with per_profit as (
+	select m.title,m.imdb_rating,(f.revenue-f.budget)*100/f.budget as ptc_profit
+    from movies m join financials f on m.movie_id=f.movie_id
+)select title, imdb_rating,ptc_profit from per_profit
+where ptc_profit>=500 and imdb_rating<(select avg(imdb_rating) from per_profit );

@@ -52,6 +52,7 @@ with per_profit as (
     from movies m join financials f on m.movie_id=f.movie_id
 )select title, imdb_rating,ptc_profit from per_profit
 where ptc_profit>=500 and imdb_rating<(select avg(imdb_rating) from per_profit );
+
 with hollywood as (select m.title,m.industry,m.release_year,f.profit
  from movies m join financials f on m.movie_id=f.movie_id )
-select title,industry,release_year,profit from hollywood where industry='hollywood' and profit>500
+select title,industry,release_year,profit from hollywood where industry='hollywood' and profit>500;

@@ -39,6 +39,9 @@ select*from movies where release_year>some(select min(release_year) from movies)
 
 select *from movies where imdb_rating>all(select avg(imdb_rating) from movies where studio='marvel studios');
 
+select m.title,m.imdb_rating,(f.revenue-f.budget)*100/f.budget as ptc_profit
+from movies m join financials f on m.movie_id=f.movie_id
+having ptc_profit>=500 and imdb_rating<(select avg(imdb_rating)from movies );
 
 -- common table expression CTE
 with actor_age (actor_name,age)as (select name , year(curdate())-birth_year from actors)

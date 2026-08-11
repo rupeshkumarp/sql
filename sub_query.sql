@@ -90,3 +90,32 @@ select *from studio_rating where avg_rating > (
     select avg_rating from studio_rating
     where studio = 'Marvel Studios'
 );
+
+WITH movie_profit AS (
+    SELECT m.title,
+           m.studio,
+           f.revenue - f.budget AS profit
+    FROM movies m
+    JOIN financials f
+        ON m.movie_id = f.movie_id
+)
+SELECT *
+FROM movie_profit mp
+WHERE profit = (
+    SELECT MAX(profit)
+    FROM movie_profit mp2
+    WHERE mp2.studio = mp.studio
+);
+
+WITH movie_profit AS (
+    SELECT m.title,
+           m.imdb_rating,
+           f.revenue,
+           f.budget,
+           (f.revenue - f.budget) * 100 / f.budget AS profit_percentage
+    FROM movies m
+    JOIN financials f
+        ON m.movie_id = f.movie_id
+)
+SELECT *
+FROM movie_profit;

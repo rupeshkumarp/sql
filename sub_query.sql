@@ -56,3 +56,37 @@ where ptc_profit>=500 and imdb_rating<(select avg(imdb_rating) from per_profit )
 with hollywood as (select m.title,m.industry,m.release_year,f.profit
  from movies m join financials f on m.movie_id=f.movie_id )
 select title,industry,release_year,profit from hollywood where industry='hollywood' and profit>500;
+
+with movie_profit as (
+    select m.title,
+           f.revenue,
+           f.budget,
+           f.revenue - f.budget AS profit
+    from movies m
+    join financials f on m.movie_id = f.movie_id
+)
+select*from movie_profit;
+
+WITH movie_profit AS (
+    SELECT m.title,
+           m.imdb_rating,
+           (f.revenue - f.budget) * 100 / f.budget AS profit_percentage
+    FROM movies m
+    JOIN financials f
+        ON m.movie_id = f.movie_id
+)
+SELECT *FROM movie_profit where profit_percentage > 500
+  and imdb_rating < (
+      select avg(imdb_rating) from movie_profit
+  );
+  
+WITH studio_rating AS (
+    SELECT studio,
+           AVG(imdb_rating) AS avg_rating
+    from movies
+    group by studio
+)
+select *from studio_rating where avg_rating > (
+    select avg_rating from studio_rating
+    where studio = 'Marvel Studios'
+);

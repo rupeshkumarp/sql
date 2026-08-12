@@ -43,3 +43,12 @@ SET profit = revenue - budget;
        ROUND((profit / revenue) * 100, 2) AS profit_percentage
 FROM financials where ((profit / revenue) * 100) between 50 and 100;
 
+select*from movies;
+insert into movies values(141,'Bahuballi','Bollywood',2030,9.0,'Arka Media works',2);
+ -- when we have enough data for the row
+insert into movies (movie_id,title,industry,language_id)
+values (142,'googly','Bollywood',3);
+
+insert into movies values
+(143,'bahuballi 3','bollywood',2030,8.5,'raj studio',2),
+(144,'Toxic','bollywood',2026,8.8,'KVN production',3);

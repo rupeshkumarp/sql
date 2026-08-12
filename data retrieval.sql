@@ -43,7 +43,38 @@ SET profit = revenue - budget;
        ROUND((profit / revenue) * 100, 2) AS profit_percentage
 FROM financials where ((profit / revenue) * 100) between 50 and 100;
 
-select*from movies;
+SELECT m.title,f.revenue,f.budget,f.revenue - f.budget AS profit
+FROM movies m
+JOIN financials f
+    ON m.movie_id = f.movie_id
+ORDER BY profit DESC
+LIMIT 5;
+
+SELECT a.name,COUNT(*) AS movie_count
+FROM actors a
+JOIN movie_actor ma
+    ON a.actor_id = ma.actor_id
+GROUP BY a.actor_id, a.name
+HAVING COUNT(*) = (
+    SELECT MAX(movie_count)
+    FROM (
+        SELECT COUNT(*) AS movie_count
+        FROM movie_actor
+        GROUP BY actor_id
+    ) AS actor_counts
+);
+
+SELECT m1.studio,
+       m1.title,
+       m1.imdb_rating
+FROM movies m1
+WHERE m1.imdb_rating = (
+    select MAX(m2.imdb_rating)
+    from movies m2
+    where m2.studio = m1.studio
+);
+
+
 insert into movies values(141,'Bahuballi','Bollywood',2030,9.0,'Arka Media works',2);
  -- when we have enough data for the row
 insert into movies (movie_id,title,industry,language_id)

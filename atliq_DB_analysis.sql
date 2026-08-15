@@ -51,3 +51,171 @@ get_financial_year(date)=2020;
 select*from fact_sales_monthly where customer_code=90002002 and 
 get_financial_q(date)='q4';
 
+
+select
+	fs.date,fs.product_code,
+    dp.product,dp.variant,fs.sold_quantity,fg.gross_price,
+    round((fs.sold_quantity* fg.gross_price),2) as gross_price_total
+from fact_sales_monthly fs
+join dim_product dp
+on fs.product_code=dp.product_code and 
+get_financial_year(fs.date)
+join fact_gross_price fg
+on fs.product_code=fg.product_code
+where fs.customer_code=90002002 and 
+get_financial_q(date)='q4';
+
+-- monthly sales of croma (customer_code=90002002)
+select 
+	s.date,
+    sum(g.gross_price*s.sold_quantity) as gross_profit
+from fact_sales_monthly s
+join fact_gross_price g on
+g.product_code=s.product_code and
+g.fiscal_year=get_financial_year(s.date)
+where customer_code=90002002
+group by s.date
+order by s.date asc;
+
+SELECT
+    s.date,
+    s.product_code,
+    SUM(g.gross_price) AS sum_total,
+    SUM(g.gross_price * s.sold_quantity) AS gross_profit
+FROM fact_sales_monthly s
+JOIN fact_gross_price g
+    ON s.product_code = g.product_code
+   AND g.fiscal_year = get_financial_year(s.date)
+GROUP BY
+    s.date,
+    s.product_code
+ORDER BY
+    s.date,
+    sum_total,
+    gross_profit;
+    
+-- yearly sales of croma customer_code=90002002
+select 
+	year(s.date) as years,
+    sum(g.gross_price*s.sold_quantity) as gross_profit
+from fact_sales_monthly s
+join fact_gross_price g on
+g.product_code=s.product_code and
+g.fiscal_year=get_financial_year(s.date)
+where customer_code=90002002
+group by years;
+
+
+select *from dim_customer 
+where customer like '%amaz%' and market ='india';-- anazon has 2 id,they are 90002008 and 90002026
+
+select 
+	s.date,
+    sum(round(g.gross_price*s.sold_quantity,2)) as monthly_sales
+from fact_sales_monthly s
+join fact_gross_price g on
+g.product_code=s.product_code and
+g.fiscal_year=get_financial_year(s.date)
+where customer_code in (90002008 , 90002016)
+group by s.date;
+
+
+--  CREATING STORED PROCEDURES
+-- USE `gdb0041`;
+-- DROP procedure IF EXISTS `get_monthly_gross_scales_for_customer`;
+
+-- USE `gdb0041`;
+-- DROP procedure IF EXISTS `gdb0041`.`get_monthly_gross_scales_for_customer`;
+-- ;
+
+-- DELIMITER $$
+-- USE `gdb0041`$$
+-- CREATE DEFINER=`root`@`localhost` PROCEDURE `get_monthly_gross_scales_for_customer`(
+-- 	in_customer_code text
+-- )
+-- BEGIN
+-- 	select 
+-- 		s.date,
+-- 		sum(g.gross_price*s.sold_quantity) as gross_profit
+-- 	from fact_sales_monthly s
+-- 	join fact_gross_price g on
+-- 	g.product_code=s.product_code and
+-- 	g.fiscal_year=get_financial_year(s.date)
+-- 	where find_in_set(s.customer_code,in_customer_code)>0
+-- 	group by s.date;
+-- END$$
+
+-- DELIMITER ;
+-- ;
+
+
+
+select
+	d.market,
+    sum(fg.gross_price*f.sold_quantity) as profit,
+    sum(f.sold_quantity) as total_sold_quentity,
+    CASE
+        WHEN sum(fg.gross_price*f.sold_quantity) > 5000000 THEN 'GOLD'
+        ELSE 'silver'
+    END AS sales_category
+from fact_sales_monthly f
+join  dim_customer d
+on f.customer_code=d.customer_code
+join fact_gross_price fg
+on f.product_code=fg.product_code
+where get_financial_year(f.date)=2021
+group by d.market ;
+
+
+select
+	sum(sold_quantity)as total_qty
+from fact_sales_monthly s
+join dim_customer c
+on s.customer_code=c.customer_code
+where get_financial_year(s.date)=2021 and c.market='india'
+group by c.market
+
+
+-- GIVES A MARKET BADGE OF GOLD OR SILVER BASED ON ITS TOTAL SALES QUENTITY OF AN PARTICULAR FISICAL YEAR
+-- USE `gdb0041`;
+-- DROP procedure IF EXISTS `get_market_badge`;
+
+-- USE `gdb0041`;
+-- DROP procedure IF EXISTS `gdb0041`.`get_market_badge`;
+-- ;
+
+-- DELIMITER $$
+-- USE `gdb0041`$$
+-- CREATE DEFINER=`root`@`localhost` PROCEDURE `get_market_badge`(
+-- 	in in_market varchar(45),
+--     in in_fiscal_year year,
+-- 	out out_badge varchar(45)
+-- )
+-- BEGIN
+-- 	declare qty int default 0;
+--     #set deafult market to be india
+--     if in_market='' then 
+-- 		set in_market='india';
+-- 	end if;
+-- 	# retrieve total qty for a given market+fiscal year
+-- 	select
+-- 		sum(sold_quantity) into qty
+-- 	from fact_sales_monthly s
+-- 	join dim_customer c
+-- 	on s.customer_code=c.customer_code
+-- 	where get_financial_year(s.date)=in_fisical_year and
+--     c.market=in_market
+-- 	group by c.market;
+--     
+--     if qty>5000000 then
+-- 		set out_badge='Gold';
+-- 	else 
+-- 		set out_badge='Silver';
+-- 	end if;
+-- END$$
+
+-- DELIMITER ;
+-- ;
+
+
+

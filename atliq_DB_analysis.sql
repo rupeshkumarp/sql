@@ -173,7 +173,7 @@ from fact_sales_monthly s
 join dim_customer c
 on s.customer_code=c.customer_code
 where get_financial_year(s.date)=2021 and c.market='india'
-group by c.market
+group by c.market;
 
 
 -- GIVES A MARKET BADGE OF GOLD OR SILVER BASED ON ITS TOTAL SALES QUENTITY OF AN PARTICULAR FISICAL YEAR
@@ -218,4 +218,39 @@ group by c.market
 -- ;
 
 
+-- net company sales in countrys;
+select
+    dc.market,
+    SUM(fs.sold_quantity) AS total_sold_quantity,
+    round(SUM(fp.gross_price * fs.sold_quantity),2) AS gross_sales
+from fact_sales_monthly fs
+join fact_post_invoice_deductions pre
+on fs.customer_code=pre.customer_code and
+pre.fiscal_year=get_financial_year(fs.date)
+JOIN fact_gross_price fp on
+ fp.product_code=fs.product_code and
+fp.fiscal_year=get_financial_year(fs.date)
+join dim_customer dc
+on dc.customer_code=fs.customer_code
+where fs.customer_code=90002002 and 
+	get_financial_year(fs.date)=2021;
 
+
+
+select 
+	s.date,s.product_code,
+	p.product,p.variant,
+    s.sold_quantity*g.gross_price as gross_prise_per_item,
+    round(s.sold_quantity*g.gross_price,2) as gross_price_total,
+    pre.pre_invoice_discount_pct
+from fact_sales_monthly s
+join dim_product p on
+s.product_code=p.product_code
+join fact_gross_price g 
+on g.product_code=p.product_code and
+g.fiscal_year=get_financial_year(s.date)
+join fact_pre_invoice_deductions pre
+on pre.customer_code=s.customer_code and
+pre.fiscal_year=get_financial_year(s.date)
+where  get_financial_year(s.date)=2021
+limit 1000000;

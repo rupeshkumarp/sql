@@ -235,8 +235,7 @@ on dc.customer_code=fs.customer_code
 where get_financial_year(fs.date)=2021 
 group by dc.market;
 
-
--- Fetches product sales, gross price, and discount details for financial year 2021.
+-- Baseline query that repeatedly uses the get_financial_year() function, which can add computation overhead during filtering and joins.
 select 
 	s.date,s.product_code,
 	p.product,p.variant,
@@ -255,6 +254,54 @@ pre.fiscal_year=get_financial_year(s.date)
 where  get_financial_year(s.date)=2021
 limit 1000000;
 
+
+-- Adds the dim_date table to get the fiscal year from a precomputed date dimension, reducing repeated date calculations.
+explain analyze
+select 
+	s.date,s.product_code,
+	p.product,p.variant,
+    s.sold_quantity*g.gross_price as gross_prise_per_item,
+    round(s.sold_quantity*g.gross_price,2) as gross_price_total,
+    pre.pre_invoice_discount_pct
+from fact_sales_monthly s
+join dim_product p on
+s.product_code=p.product_code
+join dim_date dt
+on dt.calendar_date=s.date
+join fact_gross_price g 
+on g.product_code=p.product_code and
+g.fiscal_year=get_financial_year(s.date)
+join fact_pre_invoice_deductions pre
+on pre.customer_code=s.customer_code and
+pre.fiscal_year=get_financial_year(s.date)
+where  get_financial_year(s.date)=2021
+limit 1000000;
+
+
+ -- Improves performance further by using the precomputed dt.year column instead of repeatedly calling get_financial_year().
+explain analyze
+select 
+	s.date,s.product_code,
+	p.product,p.variant,
+    s.sold_quantity*g.gross_price as gross_prise_per_item,
+    round(s.sold_quantity*g.gross_price,2) as gross_price_total,
+    pre.pre_invoice_discount_pct
+from fact_sales_monthly s
+join dim_product p on
+s.product_code=p.product_code
+join dim_date dt
+on dt.calendar_date=s.date
+join fact_gross_price g 
+on g.product_code=p.product_code and
+g.fiscal_year=dt.year
+join fact_pre_invoice_deductions pre
+on pre.customer_code=s.customer_code and
+pre.fiscal_year=dt.year
+where  dt.year=2021
+limit 1000000;
+
+
+-- Best-performing version by using the precomputed fisical_year column directly from fact_sales_monthly, eliminating the extra dim_date join and function calls.
 explain analyze
 select 
 	s.date,s.product_code,
@@ -267,9 +314,9 @@ join dim_product p on
 s.product_code=p.product_code
 join fact_gross_price g 
 on g.product_code=p.product_code and
-g.fiscal_year=get_financial_year(s.date)
+g.fiscal_year=s.fisical_year
 join fact_pre_invoice_deductions pre
 on pre.customer_code=s.customer_code and
-pre.fiscal_year=get_financial_year(s.date)
-where  get_financial_year(s.date)=2021
+pre.fiscal_year=s.fisical_year
+where  s.fisical_year=2021
 limit 1000000;

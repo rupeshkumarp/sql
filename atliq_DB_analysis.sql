@@ -347,29 +347,27 @@ from cte;
 
 
 -- CREATING VIEW--->
--- CREATE 
---     ALGORITHM = UNDEFINED 
---     DEFINER = `root`@`localhost` 
---     SQL SECURITY DEFINER
--- VIEW `sales_preinv_discount` AS
---     SELECT 
---         `s`.`date` AS `date`,
---         `s`.`product_code` AS `product_code`,
---         `p`.`product` AS `product`,
---         `p`.`variant` AS `variant`,
---         `c`.`market` AS `market`,
---         (`s`.`sold_quantity` * `g`.`gross_price`) AS `gross_prise_per_item`,
---         ROUND((`s`.`sold_quantity` * `g`.`gross_price`),
---                 2) AS `gross_price_total`,
---         `pre`.`pre_invoice_discount_pct` AS `pre_invoice_discount_pct`
---     FROM
---         ((((`fact_sales_monthly` `s`
---         JOIN `dim_customer` `c` ON ((`s`.`customer_code` = `c`.`customer_code`)))
---         JOIN `dim_product` `p` ON ((`s`.`product_code` = `p`.`product_code`)))
---         JOIN `fact_gross_price` `g` ON (((`g`.`product_code` = `p`.`product_code`)
---             AND (`g`.`fiscal_year` = `s`.`fisical_year`))))
---         JOIN `fact_pre_invoice_deductions` `pre` ON (((`pre`.`customer_code` = `s`.`customer_code`)
---             AND (`pre`.`fiscal_year` = `s`.`fisical_year`))))
+-- CREATE  VIEW `sales_preinv_discount` AS
+-- SELECT 
+--     	    s.date, 
+--             s.customer_code,
+--             c.market,
+--             s.product_code, 
+--             p.product, 
+--             p.variant, 
+--             s.sold_quantity, 
+--             g.gross_price as gross_price_per_item,
+--             ROUND(s.sold_quantity*g.gross_price,2) as gross_price_total,
+--             pre.pre_invoice_discount_pct
+-- 	FROM fact_sales_monthly s
+-- 	JOIN dim_customer c 
+-- 		ON s.customer_code = c.customer_code
+-- 	JOIN dim_product p
+--         	ON s.product_code=p.product_code
+-- 	JOIN fact_gross_price g
+--     		ON g.product_code=s.product_code
+-- 	JOIN fact_pre_invoice_deductions as pre
+--         	ON pre.customer_code = s.customer_code 
 
 
 select *,
@@ -379,4 +377,31 @@ from sales_preinv_discount s
 join fact_post_invoice_deductions po
 on 
 s.date=po.date and
-s.product_code=po.product_code 
+s.product_code=po.product_code ;
+
+select*,
+	(1-post_invoice_discount_pct)*net_invoice_sales as net_sales
+    from sales_postinv_discount;
+    
+-- creating an view for net sales
+-- CREATE 
+--     ALGORITHM = UNDEFINED 
+--     DEFINER = `root`@`localhost` 
+--     SQL SECURITY DEFINER
+-- VIEW `net_sales` AS
+--     SELECT 
+--         `sales_postinv_discount`.`date` AS `date`,
+--         `sales_postinv_discount`.`fiscal_year` AS `fiscal_year`,
+--         `sales_postinv_discount`.`customer_code` AS `customer_code`,
+--         `sales_postinv_discount`.`market` AS `market`,
+--         `sales_postinv_discount`.`product_code` AS `product_code`,
+--         `sales_postinv_discount`.`product` AS `product`,
+--         `sales_postinv_discount`.`variant` AS `variant`,
+--         `sales_postinv_discount`.`sold_quantity` AS `sold_quantity`,
+--         `sales_postinv_discount`.`gross_price_total` AS `gross_price_total`,
+--         `sales_postinv_discount`.`pre_invoice_discount_pct` AS `pre_invoice_discount_pct`,
+--         `sales_postinv_discount`.`net_invoice_sales` AS `net_invoice_sales`,
+--         `sales_postinv_discount`.`post_invoice_discount_pct` AS `post_invoice_discount_pct`,
+--         ((1 - `sales_postinv_discount`.`post_invoice_discount_pct`) * `sales_postinv_discount`.`net_invoice_sales`) AS `net_sales`
+--     FROM
+--         `sales_postinv_discount`

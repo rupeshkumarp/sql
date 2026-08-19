@@ -320,3 +320,63 @@ on pre.customer_code=s.customer_code and
 pre.fiscal_year=s.fisical_year
 where  s.fisical_year=2021
 limit 1000000;
+
+
+
+-- CTE
+with cte as(
+select 
+	s.date,s.product_code,
+	p.product,p.variant,
+    s.sold_quantity*g.gross_price as gross_prise_per_item,
+    round(s.sold_quantity*g.gross_price,2) as gross_price_total,
+    pre.pre_invoice_discount_pct
+from fact_sales_monthly s
+join dim_product p on
+s.product_code=p.product_code
+join fact_gross_price g 
+on g.product_code=p.product_code and
+g.fiscal_year=s.fisical_year
+join fact_pre_invoice_deductions pre
+on pre.customer_code=s.customer_code and
+pre.fiscal_year=s.fisical_year
+where  s.fisical_year=2021)
+select *,(gross_price_total-gross_price_total*pre_invoice_discount_pct) as net_invoice_sales
+from cte;
+
+
+
+-- CREATING VIEW--->
+-- CREATE 
+--     ALGORITHM = UNDEFINED 
+--     DEFINER = `root`@`localhost` 
+--     SQL SECURITY DEFINER
+-- VIEW `sales_preinv_discount` AS
+--     SELECT 
+--         `s`.`date` AS `date`,
+--         `s`.`product_code` AS `product_code`,
+--         `p`.`product` AS `product`,
+--         `p`.`variant` AS `variant`,
+--         `c`.`market` AS `market`,
+--         (`s`.`sold_quantity` * `g`.`gross_price`) AS `gross_prise_per_item`,
+--         ROUND((`s`.`sold_quantity` * `g`.`gross_price`),
+--                 2) AS `gross_price_total`,
+--         `pre`.`pre_invoice_discount_pct` AS `pre_invoice_discount_pct`
+--     FROM
+--         ((((`fact_sales_monthly` `s`
+--         JOIN `dim_customer` `c` ON ((`s`.`customer_code` = `c`.`customer_code`)))
+--         JOIN `dim_product` `p` ON ((`s`.`product_code` = `p`.`product_code`)))
+--         JOIN `fact_gross_price` `g` ON (((`g`.`product_code` = `p`.`product_code`)
+--             AND (`g`.`fiscal_year` = `s`.`fisical_year`))))
+--         JOIN `fact_pre_invoice_deductions` `pre` ON (((`pre`.`customer_code` = `s`.`customer_code`)
+--             AND (`pre`.`fiscal_year` = `s`.`fisical_year`))))
+
+
+select *,
+	(po.discounts_pct+po.other_deductions_pct) as post_invoice_discount_pct,
+	(1-pre_invoice_discount_pct)*gross_price_total as net_invoice_sales
+from sales_preinv_discount s
+join fact_post_invoice_deductions po
+on 
+s.date=po.date and
+s.product_code=po.product_code 

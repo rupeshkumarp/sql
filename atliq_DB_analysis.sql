@@ -405,3 +405,53 @@ select*,
 --         ((1 - `sales_postinv_discount`.`post_invoice_discount_pct`) * `sales_postinv_discount`.`net_invoice_sales`) AS `net_sales`
 --     FROM
 --         `sales_postinv_discount`
+
+
+select year((date + interval 4 month)) as fiscal_year,
+market,sum(sold_quantity) as total_sold_quantity,sum(gross_price_total)as total_gross_price
+from gross_sales group by year((date+ interval 4 month)),market ;
+
+
+select
+	market,
+    round(sum(net_sales)/1000000,2) as net_sales
+from net_sales where fiscal_year=2021
+group by market;
+
+SHOW CREATE VIEW net_sales;
+EXPLAIN ANALYZE
+SELECT
+    market,
+    ROUND(SUM(net_sales) / 1000000, 2) AS net_sales
+FROM net_sales
+WHERE fiscal_year = 2021
+GROUP BY market;
+
+
+# creating stored procedure
+-- CREATE DEFINER=`root`@`localhost` PROCEDURE `get_top_n_market_budget`(
+-- 	in_fiscal_year int,
+--     in_top_n int
+-- )
+-- BEGIN
+-- 	SELECT 
+--     	    market, 
+--             round(sum(net_sales)/1000000,2) as net_sales_mln
+-- 	FROM gdb0041.net_sales
+-- 	where fiscal_year=in_fiscal_year
+-- 	group by market
+-- 	order by net_sales_mln desc 
+--     limit in_top_n;
+-- END
+
+-- selecting top customers in an particular year
+select 
+	dc.customer,
+    ROUND(SUM(n.net_sales) / 1000000, 2) AS net_sales_mln
+FROM net_sales n join
+dim_customer dc on
+n.customer_code=c.customer_code
+WHERE n.fiscal_year = 2021
+GROUP BY dc.customer
+order by net_sales_mln;
+

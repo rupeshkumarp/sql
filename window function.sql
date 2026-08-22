@@ -46,9 +46,32 @@ GROUP BY dc.region, dc.customer
 select 
 	customer,
     region,
-    ROUND(net_sales/ 1000000, 2) AS net_sales_mln,
     ROUND(
         net_sales * 100 /
         SUM(net_sales) OVER (PARTITION BY region),2) AS plt
 from  cte2 
-order by region , net_sales_mln desc;
+order by plt desc;
+
+
+
+with cte3 as(
+select
+	dc.customer,
+	dc.region,
+    round(sum(n.net_sales)/10000,2)as net_sales_mln
+FROM nat_sales n join
+dim_customer dc on
+n.customer_code=dc.customer_code 
+WHERE n.fiscal_year = 2021
+GROUP BY dc.customer,dc.region) 
+SELECT
+    *,
+    ROUND(
+        net_sales_mln * 100 /
+        SUM(net_sales_mln) OVER (PARTITION BY region),
+        2
+    ) AS pct_shared_region
+FROM cte3
+ORDER BY region, net_sales_mln DESC;
+
+

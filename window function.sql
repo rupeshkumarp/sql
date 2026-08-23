@@ -75,3 +75,93 @@ FROM cte3
 ORDER BY region, net_sales_mln DESC;
 
 
+
+
+use random_tables;
+-- row_number() window function
+with cte as(select*,
+	row_number() over(partition by category order by amount desc) as rn
+from expenses order by category
+)select*from cte where rn<=2;
+
+-- rank() window function
+select*,
+	rank() over(partition by category order by amount desc) as rnk
+from expenses order by category;
+
+-- dense_rank()
+select*,
+	dense_rank() over(partition by category order by amount desc) as drnk
+from expenses order by category;
+
+
+-- top 2 expenses in each category
+with cte as(select*,
+	dense_rank() over(partition by category order by amount desc) as rn
+from expenses order by category
+)select*from cte where rn<=2;
+
+
+-- distrubuting books to student with highest marks
+with cte as(select*,
+	dense_rank() over(order by marks desc) as drnk,# use when u have n number of books
+    row_number() over(order by marks desc) as rnk,# use only when u have 5 books
+    rank() over(order by marks desc) as rn# use only when u need to distrubute books for  5 student only
+    from student_marks)select*from cte where drnk<=5;
+    
+
+use gdb0041;
+
+-- Rank products by total quantity sold within each division for fiscal year 2021.
+with cte as(
+		select 
+			sum(s.sold_quantity) as total_sold_q,
+			p.product,
+			s.fisical_year,
+			p.division
+		from fact_sales_monthly s 
+		join dim_product p
+		 on s.product_code=p.product_code
+		 where s.fisical_year=2021
+         group by p.product,p.division,s.fisical_year),
+cte1 as(
+		select*,
+        dense_rank() over (partition by division order by total_sold_q desc)as product_rank
+        from cte
+        )
+ select division,
+	product,
+    total_sold_q,
+    product_rank
+from cte1 
+where product_rank<=3
+
+#CREATING AN STORED PROCEDURES
+-- CREATE DEFINER=`root`@`localhost` PROCEDURE `get_top_n_products_per_division_by_qty_sold`(
+-- in_fisical_year int ,
+-- in_top_n int)
+-- BEGIN
+-- 	with cte as(
+-- 		select 
+-- 			sum(s.sold_quantity) as total_sold_q,
+-- 			p.product,
+-- 			s.fisical_year,
+-- 			p.division
+-- 		from fact_sales_monthly s 
+-- 		join dim_product p
+-- 		 on s.product_code=p.product_code
+-- 		 where s.fisical_year=in_fisical_year
+--          group by p.product,p.division,s.fisical_year),
+-- cte1 as(
+-- 		select*,
+--         dense_rank() over (partition by division order by total_sold_q desc)as product_rank
+--         from cte
+--         )
+--  select division,
+-- 	product,
+--     total_sold_q,
+--     product_rank
+-- from cte1 
+-- where product_rank<=in_top_n;
+
+-- END

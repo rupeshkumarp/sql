@@ -134,7 +134,7 @@ cte1 as(
     total_sold_q,
     product_rank
 from cte1 
-where product_rank<=3
+where product_rank<=3;
 
 #CREATING AN STORED PROCEDURES
 -- CREATE DEFINER=`root`@`localhost` PROCEDURE `get_top_n_products_per_division_by_qty_sold`(
@@ -165,3 +165,30 @@ where product_rank<=3
 -- where product_rank<=in_top_n;
 
 -- END
+
+
+
+-- Rank products by total quantity sold within each market and region for fiscal year 2021.
+with cte as(
+		select 
+			round(sum(s.net_sales)/10000,2) as total_net_sales,
+			c.region,
+            c.market,
+			s.fiscal_year
+		from nat_sales s 
+		join dim_customer c
+		 on s.customer_code=c.customer_code and
+         s.market=c.market
+		 where s.fiscal_year=2021
+         group by c.region,c.market,s.fiscal_year),
+cte1 as(
+		select*,
+        dense_rank() over (partition by region order by total_net_sales desc)as product_rank
+        from cte
+        )
+ select market,
+	region,
+    total_net_sales,
+    product_rank
+from cte1 
+where product_rank<=5;

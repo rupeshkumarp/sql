@@ -107,3 +107,24 @@ end $
 delimiter ;
 
 show events;
+
+WITH customer_sales AS (
+    SELECT
+        c.region,
+        c.customer,
+        SUM(n.net_sales) AS sales
+    FROM net_sales n
+    JOIN dim_customer c
+        ON n.customer_code = c.customer_code
+    WHERE n.fiscal_year = 2021
+    GROUP BY c.region, c.customer
+)
+SELECT
+    customer,
+    region,
+    ROUND(sales, 2) AS sales
+FROM customer_sales
+WHERE sales > (
+    SELECT AVG(sales)
+    FROM customer_sales
+);

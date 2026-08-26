@@ -106,25 +106,96 @@ where date(ts)<date('2021-10-18')-interval 5 day;
 end $
 delimiter ;
 
-show events;
+with cte as( 
+select
+    customer_code,
+	sum(abs((forecast_quantity-sold_quantity)))as abs_error,
+    sum(abs((forecast_quantity-sold_quantity)))*100/sum(forecast_quantity) as abs_erro_pct
+from fact_act_est f
+where f.fiscal_year=2021
+group by customer_code
+order by abs_erro_pct desc)
+select
+	e.*,
+    c.customer,
+	if(e.abs_erro_pct>100,0,100-e.abs_erro_pct) as forecast_accuracy
+from cte e
+join dim_customer c
+using(customer_code)
+order by forecast_accuracy asc;
 
-WITH customer_sales AS (
-    SELECT
-        c.region,
-        c.customer,
-        SUM(n.net_sales) AS sales
-    FROM net_sales n
-    JOIN dim_customer c
-        ON n.customer_code = c.customer_code
-    WHERE n.fiscal_year = 2021
-    GROUP BY c.region, c.customer
-)
-SELECT
-    customer,
-    region,
-    ROUND(sales, 2) AS sales
-FROM customer_sales
-WHERE sales > (
-    SELECT AVG(sales)
-    FROM customer_sales
-);
+
+-- creating an stored procedures for forecast accuracy
+-- USE `gdb0041`;
+-- DROP procedure IF EXISTS `get_forecast_accuracy`;
+
+-- DELIMITER $$
+-- USE `gdb0041`$$
+-- CREATE PROCEDURE `get_forecast_accuracy` (
+-- 	in_fiscal_year int)
+-- BEGIN
+-- 	with cte as( 
+-- select
+--     customer_code,
+-- 	sum(abs((forecast_quantity-sold_quantity)))as abs_error,
+--     sum(abs((forecast_quantity-sold_quantity)))*100/sum(forecast_quantity) as abs_erro_pct
+-- from fact_act_est f
+-- where f.fiscal_year=in_fiscal_year
+-- group by customer_code
+-- order by abs_erro_pct desc)
+-- select
+-- 	e.*,
+--     c.customer,
+-- 	if(e.abs_erro_pct>100,0,100-e.abs_erro_pct) as forecast_accuracy
+-- from cte e
+-- join dim_customer c
+-- using(customer_code)
+-- order by forecast_accuracy asc;
+-- END$$
+
+-- DELIMITER ;
+
+create temporary table forecast_accuracy # create an temporary table for the present session
+	select
+		customer_code,
+		sum(abs((forecast_quantity-sold_quantity)))as abs_error,
+		sum(abs((forecast_quantity-sold_quantity)))*100/sum(forecast_quantity) as abs_erro_pct
+	from fact_act_est f
+	where f.fiscal_year=2021
+	group by customer_code
+	order by abs_erro_pct desc;
+    
+
+
+-- Compare customer forecast accuracy between 2020 and 2021 and identify customers whose accuracy declined.
+with cte1 as(
+select
+		customer_code,
+		sum(abs((forecast_quantity-sold_quantity)))as abs_error_2021,
+		sum(abs((forecast_quantity-sold_quantity)))*100/sum(forecast_quantity) as abs_error_pct_2021
+	from fact_act_est f
+	where f.fiscal_year=2021
+	group by customer_code),
+cte2 as(select
+		customer_code,
+		sum(abs((forecast_quantity-sold_quantity)))as abs_error_2020,
+		sum(abs((forecast_quantity-sold_quantity)))*100/sum(forecast_quantity) as abs_error_pct_2020
+	from fact_act_est f
+	where f.fiscal_year=2020
+	group by customer_code),
+cte3 as(select
+	c.customer_code,
+	if(cc.abs_error_pct_2020>100,0,100- cc.abs_error_pct_2020) as forecast_accuracy_2020,
+    if(c.abs_error_pct_2021>100,0,100- c.abs_error_pct_2021) as forecast_accuracy_2021
+    from cte1 c join cte2 cc
+    on c.customer_code=cc.customer_code)
+select  c3.customer_code,
+    d.customer,
+    d.market,
+    round(c3.forecast_accuracy_2020, 2) as forecast_accuracy_2020,
+    round(c3.forecast_accuracy_2021, 2) as forecast_accuracy_2021
+from cte3 c3 
+join dim_customer d
+on c3.customer_code=d.customer_code
+where c3.forecast_accuracy_2021 < c3.forecast_accuracy_2020
+order by forecast_accuracy_2021 asc

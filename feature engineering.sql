@@ -198,5 +198,23 @@ from cte3 c3
 join dim_customer d
 on c3.customer_code=d.customer_code
 where c3.forecast_accuracy_2021 < c3.forecast_accuracy_2020
-order by forecast_accuracy_2021 asc
+order by forecast_accuracy_2021 asc;
 
+
+with monthly_sales as (
+    select
+        customer_code,
+        month(date) as month,
+        sum(sold_quantity) as monthly_quantity
+    from fact_sales_monthly
+    where fisical_year = 2021
+    group by customer_code, month(date)
+)
+select
+    customer_code,
+    month,
+    monthly_quantity,
+    lag(monthly_quantity) over (
+        partition by customer_code
+        order by month) as previous_month_quantity
+from monthly_sales;

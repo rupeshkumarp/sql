@@ -199,3 +199,4 @@ join dim_customer d
 on c3.customer_code=d.customer_code
 where c3.forecast_accuracy_2021 < c3.forecast_accuracy_2020
 order by forecast_accuracy_2021 asc
+

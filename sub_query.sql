@@ -119,3 +119,102 @@ WITH movie_profit AS (
 )
 SELECT *
 FROM movie_profit;
+
+
+-- find customers whose total net sales decreased in 2021 compared with 2020
+with cte1 as (
+    select
+        customer_code,
+        sum(net_sales) as net_sales_2021
+    from net_sales
+    where fiscal_year = 2021
+    group by customer_code
+),
+cte2 as (
+    select
+        customer_code,
+        sum(net_sales) as net_sales_2020
+    from net_sales
+    where fiscal_year = 2020
+    group by customer_code
+),
+cte3 as (
+    select
+        c.customer_code,
+        cc.net_sales_2020,
+        c.net_sales_2021,
+        round((c.net_sales_2021 - cc.net_sales_2020)
+            * 100 / cc.net_sales_2020,2) as growth_pct
+    from cte1 c
+    join cte2 cc
+        on c.customer_code = cc.customer_code)
+select
+    c3.customer_code,
+    d.customer,
+    d.market,
+    round(c3.net_sales_2020, 2) as net_sales_2020,
+    round(c3.net_sales_2021, 2) as net_sales_2021,
+    c3.growth_pct
+from cte3 c3
+join dim_customer d
+    on c3.customer_code = d.customer_code
+where c3.growth_pct < 0
+order by c3.growth_pct;
+
+
+-- Which regions generated more sales, but their forecasting performance became worse
+with cte1 as (
+    select
+        c.region,
+        sum(n.net_sales) as net_sales_2021,
+        100 - (sum(abs(f.forecast_quantity - f.sold_quantity)) * 100
+            / sum(f.forecast_quantity)) as accuracy_2021
+    from fact_act_est f
+    join net_sales n
+        on f.customer_code = n.customer_code
+        and f.product_code = n.product_code
+        and f.date = n.date
+    join dim_customer c
+        on f.customer_code = c.customer_code
+    where f.fiscal_year = 2021
+    group by c.region
+),
+cte2 as (
+    select
+        c.region,
+        sum(n.net_sales) as net_sales_2020,
+        100 - (sum(abs(f.forecast_quantity - f.sold_quantity)) * 100
+            / sum(f.forecast_quantity)) as accuracy_2020
+    from fact_act_est f
+    join net_sales n
+        on f.customer_code = n.customer_code
+        and f.product_code = n.product_code
+        and f.date = n.date
+    join dim_customer c
+        on f.customer_code = c.customer_code
+    where f.fiscal_year = 2020
+    group by c.region
+),
+cte3 as (
+    select
+        c.region,
+        cc.net_sales_2020,
+        c.net_sales_2021,
+        cc.accuracy_2020,
+        c.accuracy_2021,
+        round((c.net_sales_2021 - cc.net_sales_2020)
+            * 100 / cc.net_sales_2020,2) as sales_growth_pct
+    from cte1 c
+    join cte2 cc
+	on c.region = cc.region)
+select
+    region,
+    round(net_sales_2020, 2) as net_sales_2020,
+    round(net_sales_2021, 2) as net_sales_2021,
+    round(accuracy_2020, 2) as accuracy_2020,
+    round(accuracy_2021, 2) as accuracy_2021,
+    sales_growth_pct
+from cte3
+where sales_growth_pct > 0
+and accuracy_2021 < accuracy_2020
+order by sales_growth_pct desc;

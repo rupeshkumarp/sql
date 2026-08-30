@@ -135,3 +135,56 @@ WHERE m1.imdb_rating >
     FROM movies m2
     WHERE m2.studio = m1.studio
 );
+
+-- list all distinct market
+select count(*),market from dim_customer group by market;
+
+select variant,product,count(segment) over(partition by variant) as count from dim_product order by count asc;
+
+select*from fact_sales_monthly order by sold_quantity desc limit 10;
+
+-- List all customers in the "Retailer" channel located in "India"
+select *from dim_customer where channel='retailer' and market='india';
+
+-- Rank products within each division by total sold quantity
+with cte1 as(
+select d.division,d.product,sum(f.sold_quantity) as total_sold_qua from fact_sales_monthly f 
+join dim_product d
+using(product_code)
+group by d.division, d.product)
+select division,product,total_sold_qua,
+rank() over(partition by division order by total_sold_qua desc) as `rank`
+from cte1 order by division, `rank`
+limit 10;
+
+
+-- Calculate a 3-month moving average of sold quantity for each product
+select
+    fisical_year,
+    month(date) as month,
+    sum(sold_quantity) as monthly_sales,
+    round(
+        avg(sum(sold_quantity)) over (
+            order by fisical_year, month(date)
+            rows between 2 preceding and current row
+        ),
+        2
+    ) as moving_avg_3_month
+from fact_sales_monthly
+group by fisical_year, month(date)
+order by fisical_year, month;
+
+
+-- Calculate forecast accuracy (forecast_quantity vs sold_quantity) by product for FY2021.
+with cte1 as(
+select f.product_code,f.fiscal_year,
+sum(f.sold_quantity)as total_sold,
+sum(ff.forecast_quantity) as sum_forecast
+from fact_sales_monthly f
+join fact_forecast_monthly ff
+using (product_code,customer_code,fiscal_year)
+where f.fiscal_year=2021
+group by f.product_code,f.fiscal_year)
+select *, 
+round(100 - (abs(sum_forecast - total_sold) * 100/ nullif(sum_forecast, 0)),2) as forecast_accuracy 
+from cte1 

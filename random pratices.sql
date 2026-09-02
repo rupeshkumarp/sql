@@ -188,3 +188,72 @@ group by f.product_code,f.fiscal_year)
 select *, 
 round(100 - (abs(sum_forecast - total_sold) * 100/ nullif(sum_forecast, 0)),2) as forecast_accuracy 
 from cte1 
+
+
+
+
+-- Find the top 3 products in each division
+with product_sales as (
+    select
+        p.division,
+        p.product_code,
+        p.product,
+        sum(f.sold_quantity) as total_sold
+    from fact_sales_monthly f
+    join dim_product p
+        on f.product_code = p.product_code
+    where f.fisical_year = 2021
+    group by p.division, p.product_code, p.product
+),
+ranked_products as (
+    select
+        *,
+        dense_rank() over (
+        partition by division
+        order by total_sold desc
+        ) as product_rank
+    from product_sales
+)
+select
+    division,
+    product_code,
+    product,
+    total_sold,
+    product_rank
+from ranked_products
+where product_rank <= 3
+order by division, product_rank;
+
+
+
+
+-- Find customers whose sales increased by more than 20%
+with customer_sales as (
+    select
+        customer_code,
+        fiscal_year,
+        sum(net_sales) as total_sales
+    from net_sales
+    where fiscal_year in (2020, 2021)
+    group by customer_code, fiscal_year
+),
+customer_comparison as (
+    select
+        customer_code,
+        max(case when fiscal_year = 2020 then total_sales end) as sales_2020,
+        max(case when fiscal_year = 2021 then total_sales end) as sales_2021
+    from customer_sales
+    group by customer_code
+)
+select
+    customer_code,
+    round(sales_2020, 2) as sales_2020,
+    round(sales_2021, 2) as sales_2021,
+    round(
+        (sales_2021 - sales_2020) * 100
+        / nullif(sales_2020, 0),
+        2
+    ) as growth_pct
+from customer_comparison
+where sales_2021 > sales_2020 * 1.2
+order by growth_pct desc;
